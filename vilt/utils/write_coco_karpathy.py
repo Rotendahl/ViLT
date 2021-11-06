@@ -19,7 +19,7 @@ def path2rest(path, iid2captions, iid2split):
 
 
 def make_arrow(root, dataset_root):
-    with open(f"{root}/karpathy/dataset_coco.json", "r") as fp:
+    with open(f"{root}/dataset_coco.json", "r") as fp:
         captions = json.load(fp)
 
     captions = captions["images"]
@@ -33,7 +33,7 @@ def make_arrow(root, dataset_root):
         for c in cap["sentences"]:
             iid2captions[filename].append(c["raw"])
 
-    paths = list(glob(f"{root}/train2014/*.jpg")) + list(glob(f"{root}/val2014/*.jpg"))
+    paths = list(glob(f"{root}/images/train2014/*.jpg")) + list(glob(f"{root}/images/val2014/*.jpg"))
     random.shuffle(paths)
     caption_paths = [path for path in paths if path.split("/")[-1] in iid2captions]
 
