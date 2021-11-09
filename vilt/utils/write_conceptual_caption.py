@@ -26,26 +26,35 @@ def path2rest(path, iid2captions):
         split,
     ]
 
-
 def make_arrow(root, dataset_root):
+    root ='/science/image/nlp-datasets/emanuele/data/conceptual_captions/'
     for split in ["val", "train"]:
-        with open(f"{root}/{split}_annot.json", "r") as fp:
-            captions = json.load(fp)
+        captions_path = f"{root}/annotations/" + (
+            'caption_valid.json' if split == 'val' else 'caption_train.json'
+        )
+        with open(captions_path) as fp:
+            iid2captions = json.load(fp)
 
-        iid2captions = dict()
-        for cap in tqdm(captions):
-            iid = cap[0].split("/")[-1]
-            iid2captions[iid] = [cap[1]]
-
-        paths = list(glob(f"{root}/images_{split}/*/*"))
-        random.shuffle(paths)
-        caption_paths = [path for path in paths if path.split("/")[-1] in iid2captions]
-        if len(paths) == len(caption_paths):
+        image_root_path = "".join([
+            "/science/image/nlp-datasets/emanuele/data/conceptual_captions/all/",
+            'training' if split != 'val' else 'validation',
+            "/clean"
+        ])
+        '/science/image/nlp-datasets/emanuele/data/conceptual_captions/all/training/clean'
+        image_file_ids = os.listdir(image_root_path)
+        caption_paths = [
+            os.path.join(image_root_path, imgId)
+            for imgId in  image_file_ids
+            if imgId in iid2captions.keys()
+        ]
+        random.shuffle(image_file_ids)
+        if len(image_file_ids) == len(caption_paths):
             print("all images have caption annotations")
         else:
             print("not all images have caption annotations")
         print(
-            len(paths), len(caption_paths), len(iid2captions),
+            f"Nr Image file Ids: {len(image_file_ids)}, Nr Captions {len(iid2captions)}, \
+                matched = {len(caption_paths)}"
         )
 
         sub_len = int(len(caption_paths) // 100000)
