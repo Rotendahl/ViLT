@@ -10,7 +10,7 @@ from glob import glob
 import threading, queue
 
 IMAGES_PER_BATCH = 100000
-NR_READER_THREADS = 10
+NR_READER_THREADS = 100
 logging.basicConfig(level=logging.INFO)
 
 
@@ -121,7 +121,10 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
             args=(image_queue, captions, split, errs, imgs_written, table_batch)
         ).start()
 
+
     image_queue.join()
+
+
     table = []
     while table_batch.qsize() > 0:
         table.append(table_batch.get())
@@ -140,8 +143,13 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
     ))
 
     os.makedirs(destination, exist_ok=True)
+    batch_files = [file for file in os.listdir(destination) if split in file]
+    batch_file_number = 0
+    if len(batch_files) > 0:
+        batch_file_number = max(
+            [int(file.split('_')[-1].split('.')[0]) for file in batch_files]) + 1
     with pa.OSFile(
-        f"{destination}/conceptual_caption_{split}_{batch_nr}.arrow", "wb"
+        f"{destination}/conceptual_caption_{split}_{batch_file_number}.arrow", "wb"
     ) as sink:
         with pa.RecordBatchFileWriter(sink, table.schema) as writer:
             writer.write_table(table)
@@ -153,7 +161,7 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
         fp.write("\n".join(written))
 
 
-def handle_split(root_path, split, destination):
+def handle_split(root_path, split, destination, images_per_batch):
     if not os.path.exists(destination):
         os.makedirs(destination, exist_ok=True)
 
@@ -162,7 +170,7 @@ def handle_split(root_path, split, destination):
     image_paths = filter_images(captions, image_paths)
     image_paths = filter_already_written(image_paths, destination, split)
 
-    work_batches_indices = create_work_batches_indices(image_paths)
+    work_batches_indices = create_work_batches_indices(image_paths, IMAGES_PER_BATCH=images_per_batch)
     for batch_nr in tqdm(range(len(work_batches_indices))):
         logging.info(f"Handling Batch: {batch_nr+1} of {len(work_batches_indices)}")
         (batch_i, batch_j) = work_batches_indices[batch_nr]
@@ -179,8 +187,8 @@ def handle_split(root_path, split, destination):
         )
 
 
-def make_arrow(root, dataset_root):
-    handle_split(root, 'val', dataset_root)
+def make_arrow(root, dataset_root, IMAGES_PER_BATCH=100000) :
+    handle_split(root, 'val', dataset_root, images_per_batch=IMAGES_PER_BATCH)
     logging.info(f"""Finished Validation images! """)
-    handle_split(root, 'train', dataset_root)
+    handle_split(root, 'train', dataset_root, images_per_batch=IMAGES_PER_BATCH)
     logging.info(f"""Finished Training images! """)
