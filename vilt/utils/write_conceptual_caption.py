@@ -113,8 +113,6 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
     ) as sink:
         with pa.RecordBatchFileWriter(sink, table.schema) as writer:
             writer.write_table(table)
-    del table
-    gc.collect()
 
     if len(errs) > 0:
         with open(os.path.join(destination, f"{split}_split_{batch_nr}_errors.txt"), "w") as fp:
