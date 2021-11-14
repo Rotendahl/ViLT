@@ -4,11 +4,15 @@ import pyarrow as pa
 import gc
 import random
 import os
-
+import logging
 from tqdm import tqdm
 from glob import glob
+import threading
 
 IMAGES_PER_BATCH = 100000
+NR_READER_THREADS = 10
+logging.basicConfig(level=logging.INFO)
+
 
 def load_captions(root_path, split):
     filename = 'caption_valid.json' if split == 'val' else 'caption_train.json'
@@ -30,12 +34,11 @@ def filter_images(captions, image_paths):
         if img_id in captions:
             matched.append(img_path)
 
-    print("")
-    print(f"""
+    logging.info(f"""
         Filtered CC images:
             Nr Captions: {len(captions)}, Nr Images: {len(image_paths)}, matched: {len(matched)}
     """)
-    print("")
+
     random.shuffle(matched)
     return matched
 
@@ -56,7 +59,7 @@ def filter_already_written(image_paths, destination, split):
         if img_path.split('/')[-1] not in ids_written
     ]
     if len(ids_written) > 0:
-        print(f"""
+        logging.info(f"""
             Already written: {len(ids_written)},
             To Go: {len(images_not_written)}
         """)
@@ -131,10 +134,8 @@ def handle_split(root_path, split, destination):
     image_paths = filter_already_written(image_paths, destination, split)
 
     work_batches_indices = create_work_batches_indices(image_paths)
-    for batch_nr in tqdm(
-            range(len(work_batches_indices)),
-            desc=f'Handling batches for {split}'
-    ):
+    for batch_nr in range(len(work_batches_indices)):
+        logging.info(f"Handling Batch: {batch_nr} of {len(work_batches_indices)}")
         (batch_i, batch_j) = work_batches_indices[batch_nr]
         batch_paths = image_paths[batch_i:batch_j]
         batch_captions = [
@@ -151,6 +152,6 @@ def handle_split(root_path, split, destination):
 
 def make_arrow(root, dataset_root):
     handle_split(root, 'val', dataset_root)
-    print(f"""Finished Validation images! """)
+    logging.info(f"""Finished Validation images! """)
     handle_split(root, 'train', dataset_root)
-    print(f"""Finished Training images! """)
+    logging.info(f"""Finished Training images! """)
