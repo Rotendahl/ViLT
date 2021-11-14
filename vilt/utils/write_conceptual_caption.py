@@ -8,73 +8,151 @@ import os
 from tqdm import tqdm
 from glob import glob
 
+IMAGES_PER_BATCH = 100 # 100000
 
-def path2rest(path, iid2captions):
-    split, _, name = path.split("/")[-3:]
-    split = split.split("_")[-1]
-    iid = name
+def load_captions(root_path, split):
+    filename = 'caption_valid.json' if split == 'val' else 'caption_train.json'
+    with open(os.path.join(root_path, 'annotations', filename)) as fp:
+        captions = json.load(fp)
+    return captions
 
-    with open(path, "rb") as fp:
-        binary = fp.read()
+def get_image_paths(root_path, split):
+    split_path = 'training' if split != 'val' else 'validation'
+    image_root_path = os.path.join(root_path, 'all', split_path, 'clean')
+    image_file_ids = os.listdir(image_root_path)
+    return [os.path.join(image_root_path, imgId) for imgId in  image_file_ids]
 
-    captions = iid2captions[iid]
+
+def filter_images(captions, image_paths):
+    matched = []
+    for img_path in tqdm(image_paths, desc='Filtering images and captions'):
+        img_id = img_path.split('/')[-1]
+        if img_id in captions:
+            matched.append(img_path)
+    print(f"""
+        Filtered CC images:
+            Nr Captions: {len(captions)}, Nr Images: {len(image_paths)}, matched: {len(matched)}
+    """)
+
+
+
+    random.shuffle(matched)
+    return matched
+
+def filter_already_written(image_paths, destination, split):
+    written_files = [
+        file
+        for file in os.listdir(destination)
+        if split in file and 'imgs' in file
+    ]
+    ids_written = []
+    for file in written_files:
+        with open(os.path.join(destination, file), 'r') as f:
+            ids_written += f.read().split('\n')
+
+    images_not_written = [
+        img_path
+        for img_path in image_paths
+        if img_path.split('/')[-1] not in ids_written
+    ]
+    if len(ids_written) > 0:
+        print(f"""
+            Already written: {len(ids_written)},
+            To Go: {len(images_not_written)}
+        """)
+    return images_not_written
+
+
+
+def create_work_batches_indices(image_paths, IMAGES_PER_BATCH=IMAGES_PER_BATCH):
+    if len(image_paths) <= IMAGES_PER_BATCH:
+        return [(0, len(image_paths))]
+
+    nr_batches = int(len(image_paths) // IMAGES_PER_BATCH)
+    return [
+        (i * IMAGES_PER_BATCH, (i + 1) * IMAGES_PER_BATCH)
+        for i in range(nr_batches)
+    ]
+
+def path2rest(path, captions, split):
+    img_id = path.split('/')[-1]
+
+    try:
+        with open(path, "rb") as fp:
+            binary = fp.read()
+    except:
+        return None
 
     return [
         binary,
         captions,
-        iid,
+        img_id,
         split,
     ]
 
-def make_arrow(root, dataset_root):
-    root ='/science/image/nlp-datasets/emanuele/data/conceptual_captions/'
-    for split in ["val", "train"]:
-        captions_path = f"{root}/annotations/" + (
-            'caption_valid.json' if split == 'val' else 'caption_train.json'
-        )
-        with open(captions_path) as fp:
-            iid2captions = json.load(fp)
-
-        image_root_path = "".join([
-            "/science/image/nlp-datasets/emanuele/data/conceptual_captions/all/",
-            'training' if split != 'val' else 'validation',
-            "/clean"
-        ])
-        '/science/image/nlp-datasets/emanuele/data/conceptual_captions/all/training/clean'
-        image_file_ids = os.listdir(image_root_path)
-        caption_paths = [
-            os.path.join(image_root_path, imgId)
-            for imgId in  image_file_ids
-            if imgId in iid2captions.keys()
-        ]
-        random.shuffle(image_file_ids)
-        if len(image_file_ids) == len(caption_paths):
-            print("all images have caption annotations")
+def handle_batch(captions, image_paths, split, destination, batch_nr):
+    table_batch = []
+    imgs_written = []
+    errs = []
+    for path in image_paths:
+        img_id = path.split('/')[-1]
+        image_data = path2rest(path, captions, split)
+        if image_data is None:
+            errs.append(img_id)
         else:
-            print("not all images have caption annotations")
-        print(
-            f"Nr Image file Ids: {len(image_file_ids)}, Nr Captions {len(iid2captions)}, \
-                matched = {len(caption_paths)}"
+            imgs_written.append(img_id)
+            table_batch.append(image_data)
+
+    table = pa.Table.from_pandas(pd.DataFrame(
+        table_batch, columns=["image", "caption", "image_id", "split"],
+    ))
+
+    os.makedirs(destination, exist_ok=True)
+    with pa.OSFile(
+        f"{destination}/conceptual_caption_{split}_{batch_nr}.arrow", "wb"
+    ) as sink:
+        with pa.RecordBatchFileWriter(sink, table.schema) as writer:
+            writer.write_table(table)
+    del table
+    gc.collect()
+
+    if len(errs) > 0:
+        with open(os.path.join(destination, f"{split}_split_{batch_nr}_errors.txt"), "w") as fp:
+            fp.write("\n".join(errs))
+    with open(os.path.join(destination, f"{split}_imgs_split_{batch_nr}.txt"), "w") as fp:
+        fp.write("\n".join(imgs_written))
+
+
+def handle_split(root_path, split, destination):
+    if not os.path.exists(destination):
+        os.makedirs(destination, exist_ok=True)
+
+    captions = load_captions(root_path, split)
+    image_paths = get_image_paths(root_path, split)
+    image_paths = filter_images(captions, image_paths)
+    image_paths = filter_already_written(image_paths, destination, split)
+
+    work_batches_indices = create_work_batches_indices(image_paths)
+    for batch_nr in tqdm(
+            range(len(work_batches_indices)),
+            desc=f'Handling batches for {split}'
+    ):
+        (batch_i, batch_j) = work_batches_indices[batch_nr]
+        batch_paths = image_paths[batch_i:batch_j]
+        batch_captions = [
+            captions[img_path.split('/')[-1]] for img_path in batch_paths
+        ]
+        handle_batch(
+            batch_captions,
+            batch_paths,
+            split,
+            destination,
+            batch_nr
         )
 
-        sub_len = int(len(caption_paths) // 100000)
-        subs = list(range(sub_len + 1))
-        for sub in subs:
-            sub_paths = caption_paths[sub * 100000 : (sub + 1) * 100000]
-            bs = [path2rest(path, iid2captions) for path in tqdm(sub_paths)]
-            dataframe = pd.DataFrame(
-                bs, columns=["image", "caption", "image_id", "split"],
-            )
 
-            table = pa.Table.from_pandas(dataframe)
-
-            os.makedirs(dataset_root, exist_ok=True)
-            with pa.OSFile(
-                f"{dataset_root}/conceptual_caption_{split}_{sub}.arrow", "wb"
-            ) as sink:
-                with pa.RecordBatchFileWriter(sink, table.schema) as writer:
-                    writer.write_table(table)
-            del dataframe
-            del table
-            del bs
-            gc.collect()
+def make_arrow(root, dataset_root):
+    handle_split(root, 'val', dataset_root)
+    print(f"""Finished Validation images! """)
+    handle_split(root, 'train', dataset_root)
+    print(f"""Finished Training images! """)
