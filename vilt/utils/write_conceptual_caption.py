@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 from glob import glob
 
-IMAGES_PER_BATCH = 100 # 100000
+IMAGES_PER_BATCH = 100000
 
 def load_captions(root_path, split):
     filename = 'caption_valid.json' if split == 'val' else 'caption_train.json'
