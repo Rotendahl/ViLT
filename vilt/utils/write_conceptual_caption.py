@@ -7,7 +7,7 @@ import os
 import logging
 from tqdm import tqdm
 from glob import glob
-import threading
+import threading, queue
 
 IMAGES_PER_BATCH = 100000
 NR_READER_THREADS = 10
@@ -93,21 +93,50 @@ def path2rest(path, captions, split):
         split,
     ]
 
-def handle_batch(captions, image_paths, split, destination, batch_nr):
-    table_batch = []
-    imgs_written = []
-    errs = []
-    for path in tqdm(image_paths, f'loading images for batch nr: {batch_nr}'):
+def image_reader(image_queue,captions, split, errs, imgs_written, table):
+    while True:
+        path = image_queue.get()
         img_id = path.split('/')[-1]
         image_data = path2rest(path, captions, split)
         if image_data is None:
-            errs.append(img_id)
+            errs.put(img_id)
         else:
-            imgs_written.append(img_id)
-            table_batch.append(image_data)
+            imgs_written.put(img_id)
+            table.put(image_data)
+
+        image_queue.task_done()
+
+def handle_batch(captions, image_paths, split, destination, batch_nr):
+    image_queue = queue.Queue()
+    table_batch = queue.Queue()
+    imgs_written = queue.Queue()
+    errs = queue.Queue()
+    for img_path in image_paths:
+        image_queue.put(img_path)
+
+    for i in range(NR_READER_THREADS):
+        threading.Thread(
+            target=image_reader,
+            daemon=True,
+            args=(image_queue, captions, split, errs, imgs_written, table_batch)
+        ).start()
+
+    image_queue.join()
+    table = []
+    while table_batch.qsize() > 0:
+        table.append(table_batch.get())
+
+    errors = []
+    while errs.qsize() > 0:
+        errors.append(errs.get())
+
+    written = []
+    while imgs_written.qsize() > 0:
+        written.append(imgs_written.get())
+
 
     table = pa.Table.from_pandas(pd.DataFrame(
-        table_batch, columns=["image", "caption", "image_id", "split"],
+        table, columns=["image", "caption", "image_id", "split"],
     ))
 
     os.makedirs(destination, exist_ok=True)
@@ -117,11 +146,11 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
         with pa.RecordBatchFileWriter(sink, table.schema) as writer:
             writer.write_table(table)
 
-    if len(errs) > 0:
+    if len(errors) > 0:
         with open(os.path.join(destination, f"{split}_split_{batch_nr}_errors.txt"), "w") as fp:
-            fp.write("\n".join(errs))
+            fp.write("\n".join(errors))
     with open(os.path.join(destination, f"{split}_imgs_split_{batch_nr}.txt"), "w") as fp:
-        fp.write("\n".join(imgs_written))
+        fp.write("\n".join(written))
 
 
 def handle_split(root_path, split, destination):
@@ -134,8 +163,8 @@ def handle_split(root_path, split, destination):
     image_paths = filter_already_written(image_paths, destination, split)
 
     work_batches_indices = create_work_batches_indices(image_paths)
-    for batch_nr in range(len(work_batches_indices)):
-        logging.info(f"Handling Batch: {batch_nr} of {len(work_batches_indices)}")
+    for batch_nr in tqdm(range(len(work_batches_indices))):
+        logging.info(f"Handling Batch: {batch_nr+1} of {len(work_batches_indices)}")
         (batch_i, batch_j) = work_batches_indices[batch_nr]
         batch_paths = image_paths[batch_i:batch_j]
         batch_captions = [
