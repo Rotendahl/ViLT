@@ -29,13 +29,13 @@ def filter_images(captions, image_paths):
         img_id = img_path.split('/')[-1]
         if img_id in captions:
             matched.append(img_path)
+
+    print("")
     print(f"""
         Filtered CC images:
             Nr Captions: {len(captions)}, Nr Images: {len(image_paths)}, matched: {len(matched)}
     """)
-
-
-
+    print("")
     random.shuffle(matched)
     return matched
 
@@ -94,7 +94,7 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
     table_batch = []
     imgs_written = []
     errs = []
-    for path in image_paths:
+    for path in tqdm(image_paths, f'loading images for batch nr: {batch_nr}'):
         img_id = path.split('/')[-1]
         image_data = path2rest(path, captions, split)
         if image_data is None:
