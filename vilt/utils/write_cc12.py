@@ -2,26 +2,29 @@ import sys
 import json
 import pandas as pd
 import pyarrow as pa
-import gc
 import random
 import os
 import logging
 from tqdm import tqdm
-from glob import glob
 import threading, queue
 
 logging.basicConfig(level=logging.INFO)
 
 
 def load_captions(caption_path, split):
+    logging.info(f"Loading {split} captions")
     with open(os.path.join(caption_path, f"cc12_{split}.json")) as fp:
         captions = json.load(fp)
+    logging.info(f"Loaded {len(captions)} captions")
     return captions
 
 
 def get_image_paths(root_path):
     image_path = os.path.join(root_path, "images")
-    return [os.path.join(image_path, imgId) for imgId in os.listdir(image_path)]
+    return [
+        os.path.join(image_path, imgId)
+        for imgId in tqdm(os.listdir(image_path), desc="loading image paths")
+    ]
 
 
 def filter_images(captions, image_paths):
