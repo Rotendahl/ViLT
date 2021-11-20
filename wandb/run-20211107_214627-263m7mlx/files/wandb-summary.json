@@ -1,0 +1,1 @@
+{"lr-AdamW/pg1": 3.6e-07, "lr-AdamW/pg2": 3.6e-07, "lr-AdamW/pg3": 3.6e-07, "lr-AdamW/pg4": 3.6e-07, "mlm/train/loss": 10.446248054504395, "mlm/train/accuracy": 0.0, "itm/train/loss": 0.7263031005859375, "itm/train/wpa_loss": -4.0230155718745664e-05, "itm/train/accuracy": 0.40625, "epoch": 0, "_runtime": 2893, "_timestamp": 1636320881, "_step": 9}

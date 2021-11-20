@@ -1,0 +1,33 @@
+{
+    "os": "Linux-3.10.0-1160.31.1.el7.x86_64-x86_64-with-glibc2.17",
+    "python": "3.8.12",
+    "heartbeatAt": "2021-11-07T21:22:02.959833",
+    "startedAt": "2021-11-07T21:22:00.145205",
+    "docker": null,
+    "gpu": "TITAN RTX",
+    "gpu_count": 8,
+    "cpu_count": 64,
+    "cuda": null,
+    "args": [
+        "with",
+        "data_root=/home/xmt224/temp_erda/2021-11-07T21:14:31/vilt-arrow/mscoco/",
+        "num_gpus=1",
+        "num_nodes=1",
+        "task_mlm_itm",
+        "whole_word_masking=True",
+        "step200k",
+        "per_gpu_batchsize=55"
+    ],
+    "state": "running",
+    "program": "run.py",
+    "codePath": "run.py",
+    "git": {
+        "remote": "https://github.com/Rotendahl/ViLT.git",
+        "commit": "b862ea57c15658af6ffdfd03fc75f0cb280985c2"
+    },
+    "email": "Benjamin@Rotendahl.dk",
+    "root": "/home/xmt224/code/ViLT",
+    "host": "a00862.science.domain",
+    "username": "xmt224",
+    "executable": "/home/xmt224/anaconda3/envs/vilt/bin/python"
+}

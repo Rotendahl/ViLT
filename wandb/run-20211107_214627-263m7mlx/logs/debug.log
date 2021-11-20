@@ -1,0 +1,23 @@
+2021-11-07 21:46:28,022 INFO    MainThread:33136 [wandb_setup.py:_flush():71] setting env: {}
+2021-11-07 21:46:28,022 INFO    MainThread:33136 [wandb_setup.py:_flush():71] setting login settings: {}
+2021-11-07 21:46:28,022 INFO    MainThread:33136 [wandb_init.py:_log_setup():357] Logging user logs to /home/xmt224/code/ViLT/wandb/run-20211107_214627-263m7mlx/logs/debug.log
+2021-11-07 21:46:28,023 INFO    MainThread:33136 [wandb_init.py:_log_setup():358] Logging internal logs to /home/xmt224/code/ViLT/wandb/run-20211107_214627-263m7mlx/logs/debug-internal.log
+2021-11-07 21:46:28,023 INFO    MainThread:33136 [wandb_init.py:init():390] calling init triggers
+2021-11-07 21:46:28,023 INFO    MainThread:33136 [wandb_init.py:init():395] wandb.init called with sweep_config: {}
+config: {}
+2021-11-07 21:46:28,023 INFO    MainThread:33136 [wandb_init.py:init():435] starting backend
+2021-11-07 21:46:28,023 INFO    MainThread:33136 [backend.py:_multiprocessing_setup():95] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2021-11-07 21:46:28,137 INFO    MainThread:33136 [backend.py:ensure_launched():199] starting backend process...
+2021-11-07 21:46:28,195 INFO    MainThread:33136 [backend.py:ensure_launched():204] started backend process with pid: 33654
+2021-11-07 21:46:28,196 INFO    MainThread:33136 [wandb_init.py:init():444] backend started and connected
+2021-11-07 21:46:28,198 INFO    MainThread:33136 [wandb_init.py:init():503] updated telemetry
+2021-11-07 21:46:28,355 INFO    MainThread:33136 [wandb_init.py:init():533] communicating current version
+2021-11-07 21:46:30,795 INFO    MainThread:33136 [wandb_init.py:init():538] got version response 
+2021-11-07 21:46:30,795 INFO    MainThread:33136 [wandb_init.py:init():548] communicating run to backend with 30 second timeout
+2021-11-07 21:46:31,213 INFO    MainThread:33136 [wandb_init.py:init():576] starting run threads in backend
+2021-11-07 21:46:36,221 INFO    MainThread:33136 [wandb_run.py:_console_start():1693] atexit reg
+2021-11-07 21:46:36,223 INFO    MainThread:33136 [wandb_run.py:_redirect():1567] redirect: SettingsConsole.REDIRECT
+2021-11-07 21:46:36,224 INFO    MainThread:33136 [wandb_run.py:_redirect():1572] Redirecting console.
+2021-11-07 21:46:36,226 INFO    MainThread:33136 [wandb_run.py:_redirect():1628] Redirects installed.
+2021-11-07 21:46:36,226 INFO    MainThread:33136 [wandb_init.py:init():603] run started, returning control to user process
+2021-11-07 21:46:36,226 INFO    MainThread:33136 [wandb_run.py:_config_callback():911] config_cb None None {'config/exp_name': 'mlm_itm', 'config/seed': 0, 'config/datasets': ['coco'], 'config/loss_names/itm': 1, 'config/loss_names/mlm': 1, 'config/loss_names/mpp': 0, 'config/loss_names/vqa': 0, 'config/loss_names/nlvr2': 0, 'config/loss_names/irtr': 0, 'config/batch_size': 4096, 'config/train_transform_keys': ['pixelbert'], 'config/val_transform_keys': ['pixelbert'], 'config/image_size': 384, 'config/max_image_len': 200, 'config/patch_size': 32, 'config/draw_false_image': 1, 'config/image_only': False, 'config/vqav2_label_size': 3129, 'config/max_text_len': 40, 'config/tokenizer': 'bert-base-uncased', 'config/vocab_size': 30522, 'config/whole_word_masking': True, 'config/mlm_prob': 0.15, 'config/draw_false_text': 0, 'config/vit': 'vit_base_patch32_384', 'config/hidden_size': 768, 'config/num_heads': 12, 'config/num_layers': 12, 'config/mlp_ratio': 4, 'config/drop_rate': 0.1, 'config/optim_type': 'adamw', 'config/learning_rate': 0.0001, 'config/weight_decay': 0.01, 'config/decay_power': 1, 'config/max_epoch': 200, 'config/max_steps': 200000, 'config/warmup_steps': 2500, 'config/end_lr': 0, 'config/lr_mult': 1, 'config/get_recall_metric': False, 'config/resume_from': 'None', 'config/fast_dev_run': False, 'config/val_check_interval': 1.0, 'config/test_only': False, 'config/data_root': '/home/xmt224/temp_erda/2021-11-07T20:41:50/vilt-arrow/mscoco/', 'config/log_dir': 'result', 'config/per_gpu_batchsize': 32, 'config/num_gpus': 1, 'config/num_nodes': 1, 'config/load_path': '', 'config/num_workers': 8, 'config/precision': 16}
