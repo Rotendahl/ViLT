@@ -8,14 +8,19 @@ import logging
 from tqdm import tqdm
 import threading, queue
 
-logging.basicConfig(level=logging.INFO)
+
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def load_captions(caption_path, split):
     logging.info(f"Loading {split} captions")
     with open(os.path.join(caption_path, f"cc12_{split}.json")) as fp:
         captions = json.load(fp)
-    logging.info(f"Loaded {len(captions)} captions")
+    logging.info(f"Loaded {len(captions):,} captions")
     return captions
 
 
@@ -28,24 +33,24 @@ def get_image_paths(root_path):
 
 
 def filter_images(captions, image_paths):
-    matched = []
+    matched = {}
     for img_path in tqdm(image_paths, desc="Filtering images and captions"):
         img_id = img_path.split("/")[-1]
         if img_id in captions:
-            matched.append(img_path)
+            matched[img_id] = (img_id, captions[img_id], img_path)
 
     logging.info(
         f"""
         Filtered CC images:
-            Nr Captions: {len(captions)}, Nr Images: {len(image_paths)}, matched: {len(matched)}
+            Nr Captions: {len(captions):,}
+            Nr Images: {len(image_paths):,}
+            Matched: {len(matched):,}
     """
     )
-
-    random.shuffle(matched)
     return matched
 
 
-def filter_already_written(image_paths, destination, split):
+def filter_already_written(cap_imgs, destination, split):
     written_files = [
         file for file in os.listdir(destination) if split in file and "imgs" in file
     ]
@@ -53,29 +58,22 @@ def filter_already_written(image_paths, destination, split):
     for file in written_files:
         with open(os.path.join(destination, file), "r") as f:
             ids_written += f.read().split("\n")
-
-    images_not_written = [
-        img_path
-        for img_path in image_paths
-        if img_path.split("/")[-1] not in ids_written
-    ]
-    if len(ids_written) > 0:
-        logging.info(
-            f"""
-            Already written: {len(ids_written)},
-            To Go: {len(images_not_written)}
-        """
-        )
-    return images_not_written
+    logging.info(f"For split {split}, images already written: {len(ids_written):,}")
+    for written_id in ids_written:
+        cap_imgs.pop(written_id, None)
+    logging.info(f"Image to be written: {len(cap_imgs):,}")
+    return cap_imgs
 
 
-def create_work_batches_indices(image_paths):
-    if len(image_paths) <= IMAGES_PER_BATCH:
-        return [(0, len(image_paths))]
+def create_work_batches_indices(cap_images):
+    if len(cap_images) <= IMAGES_PER_BATCH:
+        return [cap_images.keys()]
 
-    nr_batches = int(len(image_paths) // IMAGES_PER_BATCH)
+    nr_batches = int(len(cap_images) // IMAGES_PER_BATCH)
+    ids = list(cap_images.keys())
     return [
-        (i * IMAGES_PER_BATCH, (i + 1) * IMAGES_PER_BATCH) for i in range(nr_batches)
+        ids[i * IMAGES_PER_BATCH : (i + 1) * IMAGES_PER_BATCH]
+        for i in range(nr_batches)
     ]
 
 
@@ -96,36 +94,42 @@ def path2rest(path, captions, split):
     ]
 
 
-def image_reader(image_queue, captions, split, errs, imgs_written, table):
-    while True:
-        path = image_queue.get()
-        img_id = path.split("/")[-1]
-        image_data = path2rest(path, captions, split)
-        if image_data is None:
-            errs.put(img_id)
-        else:
+def cap_img_reader(cap_img_queue, split, errs, imgs_written, table):
+    while not cap_img_queue.empty():
+        (img_id, caption, img_path) = cap_img_queue.get()
+        try:
+            with open(img_path, "rb") as fp:
+                binary = fp.read()
+            row = [
+                binary,
+                caption,
+                img_id,
+                split,
+            ]
             imgs_written.put(img_id)
-            table.put(image_data)
+            table.put(row)
+        except:
+            errs.put(img_id)
+        finally:
+            cap_img_queue.task_done()
 
-        image_queue.task_done()
 
-
-def handle_batch(captions, image_paths, split, destination, batch_nr):
-    image_queue = queue.Queue()
+def handle_batch(captions, img_ids, split, destination, batch_nr):
+    cap_img_queue = queue.Queue()
     table_batch = queue.Queue()
     imgs_written = queue.Queue()
     errs = queue.Queue()
-    for img_path in image_paths:
-        image_queue.put(img_path)
+    for img_id in img_ids:
+        cap_img_queue.put(captions[img_id])
 
     for i in range(NR_READER_THREADS):
         threading.Thread(
-            target=image_reader,
+            target=cap_img_reader,
             daemon=True,
-            args=(image_queue, captions, split, errs, imgs_written, table_batch),
+            args=(cap_img_queue, split, errs, imgs_written, table_batch),
         ).start()
 
-    image_queue.join()
+    cap_img_queue.join()
 
     table = []
     while table_batch.qsize() > 0:
@@ -161,11 +165,12 @@ def handle_batch(captions, image_paths, split, destination, batch_nr):
 
     if len(errors) > 0:
         with open(
-            os.path.join(destination, f"{split}_split_{batch_nr}_errors.txt"), "w"
+            os.path.join(destination, f"{split}_split_{batch_file_number}_errors.txt"),
+            "w",
         ) as fp:
             fp.write("\n".join(errors))
     with open(
-        os.path.join(destination, f"{split}_imgs_split_{batch_nr}.txt"), "w"
+        os.path.join(destination, f"{split}_imgs_split_{batch_file_number}.txt"), "w"
     ) as fp:
         fp.write("\n".join(written))
 
@@ -176,16 +181,15 @@ def handle_split(caption_root, image_root, split, destination):
 
     captions = load_captions(caption_root, split)
     image_paths = get_image_paths(image_root)
-    image_paths = filter_images(captions, image_paths)
-    image_paths = filter_already_written(image_paths, destination, split)
+    cap_images = filter_images(captions, image_paths)
+    cap_images = filter_already_written(cap_images, destination, split)
 
-    work_batches_indices = create_work_batches_indices(image_paths)
-    for batch_nr in tqdm(range(len(work_batches_indices))):
-        logging.info(f"Handling Batch: {batch_nr+1} of {len(work_batches_indices)}")
-        (batch_i, batch_j) = work_batches_indices[batch_nr]
-        batch_paths = image_paths[batch_i:batch_j]
-        batch_captions = [captions[img_path.split("/")[-1]] for img_path in batch_paths]
-        handle_batch(batch_captions, batch_paths, split, destination, batch_nr)
+    work_batches_img_ids = create_work_batches_indices(cap_images)
+    for batch_nr in tqdm(range(len(work_batches_img_ids))):
+        logging.info(f"Handling Batch: {batch_nr+1} of {len(work_batches_img_ids)}")
+        handle_batch(
+            cap_images, work_batches_img_ids[batch_nr], split, destination, batch_nr
+        )
 
 
 def make_arrow(caption_root, image_root, dataset_root):
