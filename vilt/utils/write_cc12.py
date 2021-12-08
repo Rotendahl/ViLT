@@ -2,7 +2,6 @@ import sys
 import json
 import pandas as pd
 import pyarrow as pa
-import random
 import os
 import logging
 from tqdm import tqdm
@@ -199,7 +198,7 @@ def make_arrow(caption_root, image_root, dataset_root):
     logging.info(f"""Finished Training images! """)
 
 
-IMAGES_PER_BATCH = 100
+IMAGES_PER_BATCH = 10_000
 NR_READER_THREADS = 10
 
 if __name__ == "__main__":
