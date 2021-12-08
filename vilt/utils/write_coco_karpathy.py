@@ -3,6 +3,9 @@ import os
 import pandas as pd
 import pyarrow as pa
 import random
+from .rescaler import load_and_rescale
+
+IMAGE_SIZE = 384
 
 from tqdm import tqdm
 from glob import glob
@@ -11,11 +14,10 @@ from collections import defaultdict
 
 def path2rest(path, iid2captions, iid2split):
     name = path.split("/")[-1]
-    with open(path, "rb") as fp:
-        binary = fp.read()
+    img = load_and_rescale(path)
     captions = iid2captions[name]
     split = iid2split[name]
-    return [binary, captions, name, split]
+    return [img, captions, name, split]
 
 
 def make_arrow(root, dataset_root):
@@ -33,7 +35,9 @@ def make_arrow(root, dataset_root):
         for c in cap["sentences"]:
             iid2captions[filename].append(c["raw"])
 
-    paths = list(glob(f"{root}/images/train2014/*.jpg")) + list(glob(f"{root}/images/val2014/*.jpg"))
+    paths = list(glob(f"{root}/images/train2014/*.jpg")) + list(
+        glob(f"{root}/images/val2014/*.jpg")
+    )
     random.shuffle(paths)
     caption_paths = [path for path in paths if path.split("/")[-1] in iid2captions]
 
@@ -42,7 +46,9 @@ def make_arrow(root, dataset_root):
     else:
         print("not all images have caption annotations")
     print(
-        len(paths), len(caption_paths), len(iid2captions),
+        len(paths),
+        len(caption_paths),
+        len(iid2captions),
     )
 
     bs = [path2rest(path, iid2captions, iid2split) for path in tqdm(caption_paths)]
@@ -51,7 +57,8 @@ def make_arrow(root, dataset_root):
         batches = [b for b in bs if b[-1] == split]
 
         dataframe = pd.DataFrame(
-            batches, columns=["image", "caption", "image_id", "split"],
+            batches,
+            columns=["image", "caption", "image_id", "split"],
         )
 
         table = pa.Table.from_pandas(dataframe)
