@@ -67,7 +67,7 @@ def filter_already_written(image_paths, destination, split):
     return images_not_written
 
 
-def create_work_batches_indices(image_paths, IMAGES_PER_BATCH=IMAGES_PER_BATCH):
+def create_work_batches_indices(image_paths, IMAGES_PER_BATCH=10_000):
     if len(image_paths) <= IMAGES_PER_BATCH:
         return [(0, len(image_paths))]
 
