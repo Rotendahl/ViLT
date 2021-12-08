@@ -4,9 +4,6 @@ import pandas as pd
 import pyarrow as pa
 import random
 
-
-IMAGE_SIZE = 384
-
 from tqdm import tqdm
 from glob import glob
 from collections import defaultdict

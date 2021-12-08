@@ -5,13 +5,10 @@ import random
 import os
 import logging
 from tqdm import tqdm
-from glob import glob
 import threading, queue
 
-from .rescaler import load_and_rescale
-
 IMAGES_PER_BATCH = 100000
-NR_READER_THREADS = 40
+NR_READER_THREADS = 10
 logging.basicConfig(level=logging.INFO)
 
 
@@ -84,16 +81,18 @@ def create_work_batches_indices(image_paths, IMAGES_PER_BATCH=IMAGES_PER_BATCH):
 def path2rest(path, captions, split):
     img_id = path.split("/")[-1]
 
-    img = load_and_rescale(path)
     try:
-        return [
-            img,
-            captions,
-            img_id,
-            split,
-        ]
+        with open(path, "rb") as fp:
+            binary = fp.read()
     except:
         return None
+
+    return [
+        binary,
+        captions,
+        img_id,
+        split,
+    ]
 
 
 def image_reader(image_queue, captions, split, errs, imgs_written, table):
