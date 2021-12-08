@@ -35,7 +35,7 @@ def path2rest(path, iid2captions):
 
 
 def make_arrow(root, dataset_root):
-    with open(f"{root}/annotations/region_descriptions.json", "r") as fp:
+    with open(os.path.join(root, "region_descriptions.json", "r")) as fp:
         captions = json.load(fp)
 
     iid2captions = defaultdict(list)
@@ -57,12 +57,15 @@ def make_arrow(root, dataset_root):
     else:
         print("not all images have caption annotations")
     print(
-        len(paths), len(caption_paths), len(iid2captions),
+        len(paths),
+        len(caption_paths),
+        len(iid2captions),
     )
 
     bs = [path2rest(path, iid2captions) for path in tqdm(caption_paths)]
     dataframe = pd.DataFrame(
-        bs, columns=["image", "caption", "width", "height", "x", "y", "image_id"],
+        bs,
+        columns=["image", "caption", "width", "height", "x", "y", "image_id"],
     )
     table = pa.Table.from_pandas(dataframe)
 
