@@ -7,7 +7,6 @@ import logging
 from tqdm import tqdm
 import threading, queue
 
-IMAGES_PER_BATCH = 100000
 NR_READER_THREADS = 10
 logging.basicConfig(level=logging.INFO)
 
@@ -189,7 +188,7 @@ def handle_split(root_path, split, destination, images_per_batch):
         handle_batch(batch_captions, batch_paths, split, destination, batch_nr)
 
 
-def make_arrow(root, dataset_root, IMAGES_PER_BATCH=100000):
+def make_arrow(root, dataset_root, IMAGES_PER_BATCH=10_000):
     handle_split(root, "val", dataset_root, images_per_batch=IMAGES_PER_BATCH)
     logging.info(f"""Finished Validation images! """)
     handle_split(root, "train", dataset_root, images_per_batch=IMAGES_PER_BATCH)
