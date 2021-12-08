@@ -1,15 +1,15 @@
 import unittest
 import os
 
-import write_cc12 as caption_writer
+import vilt.utils.write_conceptual_caption as caption_writer
 
 
-class TestCocoWriter(unittest.TestCase):
+class TestCCWriter(unittest.TestCase):
     def setUp(self) -> None:
         self.root_path = (
-            "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT/assets/test_12gcc"
+            "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT/assets/test_gcc"
         )
-        self.dest_path = "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT/assets/test_12gcc/output"
+        self.dest_path = "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT/assets/test_gcc/output"
 
     def test_load_captions(self):
         self.assertEqual(
