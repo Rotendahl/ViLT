@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import pyarrow as pa
 import random
-from .rescaler import load_and_rescale
+
 
 IMAGE_SIZE = 384
 
@@ -14,10 +14,11 @@ from collections import defaultdict
 
 def path2rest(path, iid2captions, iid2split):
     name = path.split("/")[-1]
-    img = load_and_rescale(path)
+    with open(path, "rb") as fp:
+        binary = fp.read()
     captions = iid2captions[name]
     split = iid2split[name]
-    return [img, captions, name, split]
+    return [binary, captions, name, split]
 
 
 def make_arrow(root, dataset_root):
