@@ -6,9 +6,11 @@ from torch.utils.data.dataset import ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
 
-dist.init_process_group(
-    "gloo", init_method="file:///tmp/somefile", rank=0, world_size=1
-)
+from vilt.config import config
+
+# dist.init_process_group(
+#     "gloo", init_method="file:///tmp/somefile", rank=0, world_size=1
+# )
 from . import _datamodules
 
 
@@ -22,7 +24,7 @@ class MTDataModule(LightningDataModule):
         self.dm_keys = datamodule_keys
         self.dm_dicts = {key: _datamodules[key](_config) for key in datamodule_keys}
         self.dms = [v for k, v in self.dm_dicts.items()]
-
+        self.config = _config
         self.batch_size = self.dms[0].batch_size
         self.vocab_size = self.dms[0].vocab_size
         self.num_workers = self.dms[0].num_workers

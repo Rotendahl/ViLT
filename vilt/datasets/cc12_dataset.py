@@ -3,7 +3,7 @@ from .base_dataset import BaseDataset
 import os
 
 
-class ConceptualCaptionDataset(BaseDataset):
+class CC12Dataset(BaseDataset):
     def __init__(self, *args, split="", **kwargs):
         assert split in ["train", "val", "test"]
         data_path = kwargs["config"]["data_root"]
@@ -14,14 +14,14 @@ class ConceptualCaptionDataset(BaseDataset):
             names = [
                 f.split(".")[0]
                 for f in os.listdir(data_path)
-                if "conceptual_caption" in f and "train" in f
+                if "cc12" in f and "train" in f
             ]
 
         elif split == "val":
             names = [
                 f.split(".")[0]
                 for f in os.listdir(data_path)
-                if "conceptual_caption" in f and "val" in f
+                if "cc12" in f and "val" in f
             ]
 
         super().__init__(*args, **kwargs, names=names, text_column_name="caption")

@@ -1,3 +1,4 @@
+import logging
 import os
 import copy
 import pytorch_lightning as pl
@@ -6,6 +7,44 @@ from pytorch_lightning.loggers import WandbLogger
 from vilt.config import ex
 from vilt.modules import ViLTransformerSS
 from vilt.datamodules.multitask_datamodule import MTDataModule
+
+
+class CheckpointEveryNSteps(pl.Callback):
+    """
+    Save a checkpoint every N steps, instead of Lightning's default that checkpoints
+    based on validation loss.
+    """
+
+    def __init__(
+        self,
+        save_step_frequency,
+        prefix="N-Step-Checkpoint",
+        use_modelcheckpoint_filename=False,
+    ):
+        """
+        Args:
+            save_step_frequency: how often to save in steps
+            prefix: add a prefix to the name, only used if
+                use_modelcheckpoint_filename=False
+            use_modelcheckpoint_filename: just use the ModelCheckpoint callback's
+                default filename, don't use ours.
+        """
+        self.save_step_frequency = save_step_frequency
+        self.prefix = prefix
+        self.use_modelcheckpoint_filename = use_modelcheckpoint_filename
+
+    def on_batch_end(self, trainer: pl.Trainer, _):
+        """Check if we should save a checkpoint after every train batch"""
+        epoch = trainer.current_epoch
+        global_step = trainer.global_step
+        if global_step % self.save_step_frequency == 0:
+            if self.use_modelcheckpoint_filename:
+                filename = trainer.checkpoint_callback.filename
+            else:
+                filename = f"{self.prefix}_{epoch=}_{global_step=}.ckpt"
+            ckpt_path = os.path.join(trainer.checkpoint_callback.dirpath, filename)
+            trainer.save_checkpoint(ckpt_path)
+            logging.info(f"Wrote checkpoint {ckpt_path}")
 
 
 @ex.automain
@@ -32,7 +71,7 @@ def main(_config):
     )
 
     lr_callback = pl.callbacks.LearningRateMonitor(logging_interval="step")
-    callbacks = [checkpoint_callback, lr_callback]
+    callbacks = [checkpoint_callback, lr_callback, CheckpointEveryNSteps(1000)]
 
     num_gpus = (
         _config["num_gpus"]
@@ -45,9 +84,7 @@ def main(_config):
         grad_steps = _config["batch_size"] // (
             _config["per_gpu_batchsize"] * num_gpus * _config["num_nodes"]
         )
-
     max_steps = _config["max_steps"] if _config["max_steps"] is not None else None
-
     wandb_logger = WandbLogger(name=exp_name, project="vilt")
     trainer = pl.Trainer(
         gpus=_config["num_gpus"],
@@ -55,7 +92,7 @@ def main(_config):
         precision=_config["precision"],
         strategy="ddp",
         benchmark=True,
-        deterministic=True,
+        deterministic=False,
         max_epochs=_config["max_epoch"] if max_steps is None else 1000,
         max_steps=max_steps,
         callbacks=callbacks,
@@ -65,7 +102,7 @@ def main(_config):
         accumulate_grad_batches=grad_steps,
         log_every_n_steps=10,
         flush_logs_every_n_steps=10,
-        resume_from_checkpoint=_config["resume_from"],
+        resume_from_checkpoint="/home/xmt224/data/vilt_original.ckpt",
         weights_summary="top",
         fast_dev_run=_config["fast_dev_run"],
         val_check_interval=_config["val_check_interval"],

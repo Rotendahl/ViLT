@@ -24,7 +24,7 @@ def get_pretrained_tokenizer(from_pretrained):
 class BaseDataModule(LightningDataModule):
     def __init__(self, _config):
         super().__init__()
-
+        self.config = _config
         self.data_dir = _config["data_root"]
 
         self.num_workers = _config["num_workers"]
@@ -82,6 +82,7 @@ class BaseDataModule(LightningDataModule):
             draw_false_image=self.draw_false_image,
             draw_false_text=self.draw_false_text,
             image_only=self.image_only,
+            config=self.config,
         )
 
     def set_val_dataset(self):
@@ -94,6 +95,7 @@ class BaseDataModule(LightningDataModule):
             draw_false_image=self.draw_false_image,
             draw_false_text=self.draw_false_text,
             image_only=self.image_only,
+            config=self.config,
         )
 
         if hasattr(self, "dataset_cls_no_false"):
@@ -106,6 +108,7 @@ class BaseDataModule(LightningDataModule):
                 draw_false_image=0,
                 draw_false_text=0,
                 image_only=self.image_only,
+                config=self.config,
             )
 
     def make_no_false_val_dset(self, image_only=False):
@@ -118,6 +121,7 @@ class BaseDataModule(LightningDataModule):
             draw_false_image=0,
             draw_false_text=0,
             image_only=image_only,
+            config=self.config,
         )
 
     def set_test_dataset(self):
@@ -130,6 +134,7 @@ class BaseDataModule(LightningDataModule):
             draw_false_image=self.draw_false_image,
             draw_false_text=self.draw_false_text,
             image_only=self.image_only,
+            config=self.config,
         )
 
     def setup(self, stage):

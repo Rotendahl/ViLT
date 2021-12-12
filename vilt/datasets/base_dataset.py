@@ -3,7 +3,7 @@ import torch
 import io
 import pyarrow as pa
 import os
-
+import logging
 from PIL import Image
 from vilt.transforms import keys_to_transforms
 
@@ -21,6 +21,7 @@ class BaseDataset(torch.utils.data.Dataset):
         draw_false_image=0,
         draw_false_text=0,
         image_only=False,
+        config=None,
     ):
         """
         data_dir : where dataset file *.arrow lives; existence should be guaranteed via DataModule.prepare_data
@@ -38,7 +39,17 @@ class BaseDataset(torch.utils.data.Dataset):
         self.draw_false_text = draw_false_text
         self.image_only = image_only
         self.data_dir = data_dir
+        self.config = config
 
+        self.gender_normalized_ratio = config["starting_gender_ratio"]
+        remaing = 1 - self.gender_normalized_ratio
+        self.total_steps = (
+            config["max_steps"]
+            if config["max_steps"] < 200_000
+            else config["max_steps"] - 200_000
+        )  # pretrained steps does not count
+        self.delta_gender = remaing / self.total_steps
+        self.current_count = 0
         if len(names) != 0:
             tables = [
                 pa.ipc.RecordBatchFileReader(
@@ -56,11 +67,7 @@ class BaseDataset(torch.utils.data.Dataset):
             if text_column_name != "":
                 self.text_column_name = text_column_name
                 self.all_texts = self.table[text_column_name].to_pandas().tolist()
-                self.all_texts = (
-                    [list(set(texts)) for texts in self.all_texts]
-                    if remove_duplicate
-                    else self.all_texts
-                )
+                self.all_mapped_texts = self.table["mapped"].to_pandas().tolist()
             else:
                 self.all_texts = list()
         else:
@@ -80,18 +87,26 @@ class BaseDataset(torch.utils.data.Dataset):
 
     @property
     def corpus(self):
-        return [text for texts in self.all_texts for text in texts]
+        return [text for texts in self.all_mapped_texts for text in texts]
 
     def __len__(self):
         return len(self.index_mapper)
 
-    def get_raw_image(self, index, image_key="image"):
+    def _raise_gender_delta(self):
+        self.current_count += 1
+        if self.current_count >= self.config["batch_size"]:
+            self.gender_normalized_ratio += self.delta_gender
+            logging.info(f"Raised gender ratio to {self.gender_normalized_ratio}")
+            self.current_count = 0
+
+    def get_raw_image(self, index, image_key="binary"):
+        image_key = "binary" if "binary" in self.table.schema.names else "image"
         index, caption_index = self.index_mapper[index]
         image_bytes = io.BytesIO(self.table[image_key][index].as_py())
         image_bytes.seek(0)
         return Image.open(image_bytes).convert("RGB")
 
-    def get_image(self, index, image_key="image"):
+    def get_image(self, index, image_key="binary"):
         image = self.get_raw_image(index, image_key=image_key)
         image_tensor = [tr(image) for tr in self.transforms]
         return {
@@ -101,16 +116,19 @@ class BaseDataset(torch.utils.data.Dataset):
             "raw_index": index,
         }
 
-    def get_false_image(self, rep, image_key="image"):
+    def get_false_image(self, rep, image_key="binary"):
         random_index = random.randint(0, len(self.index_mapper) - 1)
         image = self.get_raw_image(random_index, image_key=image_key)
         image_tensor = [tr(image) for tr in self.transforms]
         return {f"false_image_{rep}": image_tensor}
 
     def get_text(self, raw_index):
+        self._raise_gender_delta()
         index, caption_index = self.index_mapper[raw_index]
-
         text = self.all_texts[index][caption_index]
+        if random.random() <= self.gender_normalized_ratio:
+            text = self.all_mapped_texts[index][caption_index]
+
         encoding = self.tokenizer(
             text,
             padding="max_length",
@@ -126,10 +144,13 @@ class BaseDataset(torch.utils.data.Dataset):
         }
 
     def get_false_text(self, rep):
+        self._raise_gender_delta()
         random_index = random.randint(0, len(self.index_mapper) - 1)
 
         index, caption_index = self.index_mapper[random_index]
         text = self.all_texts[index][caption_index]
+        if random.random() <= self.gender_normalized_ratio:
+            text = self.all_mapped_texts[index][caption_index]
         encoding = self.tokenizer(
             text,
             truncation=True,
