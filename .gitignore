@@ -1,8 +1,10 @@
 lightning_logs/
+
 __pycache__/
 *.arrow
 .vscode/
 notebooks/
+wandb
 dataset/
 dropbox_uploader.sh
 .dfc/
