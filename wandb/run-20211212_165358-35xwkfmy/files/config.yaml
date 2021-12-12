@@ -1,0 +1,187 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.7
+    framework: huggingface
+    huggingface_version: 4.13.0
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    m:
+    - 1: trainer/global_step
+      6:
+      - 3
+    python_version: 3.9.7
+    start_time: 1639324438
+    t:
+      1:
+      - 1
+      - 9
+      - 11
+      3:
+      - 13
+      4: 3.9.7
+      5: 0.12.7
+      6: 4.13.0
+      8:
+      - 5
+config/batch_size:
+  desc: null
+  value: 4096
+config/data_root:
+  desc: null
+  value: /Users/rotendahl/Documents/KU/Courses/thesis/data/arrow_mapped
+config/datasets:
+  desc: null
+  value:
+  - coco
+config/decay_power:
+  desc: null
+  value: 1
+config/draw_false_image:
+  desc: null
+  value: 1
+config/draw_false_text:
+  desc: null
+  value: 0
+config/drop_rate:
+  desc: null
+  value: 0.1
+config/end_lr:
+  desc: null
+  value: 0
+config/exp_name:
+  desc: null
+  value: mlm_itm
+config/fast_dev_run:
+  desc: null
+  value: false
+config/get_recall_metric:
+  desc: null
+  value: false
+config/hidden_size:
+  desc: null
+  value: 768
+config/image_only:
+  desc: null
+  value: false
+config/image_size:
+  desc: null
+  value: 384
+config/learning_rate:
+  desc: null
+  value: 0.0001
+config/load_path:
+  desc: null
+  value: ''
+config/log_dir:
+  desc: null
+  value: result
+config/loss_names/irtr:
+  desc: null
+  value: 0
+config/loss_names/itm:
+  desc: null
+  value: 1
+config/loss_names/mlm:
+  desc: null
+  value: 1
+config/loss_names/mpp:
+  desc: null
+  value: 0
+config/loss_names/nlvr2:
+  desc: null
+  value: 0
+config/loss_names/vqa:
+  desc: null
+  value: 0
+config/lr_mult:
+  desc: null
+  value: 1
+config/max_epoch:
+  desc: null
+  value: 200
+config/max_image_len:
+  desc: null
+  value: 200
+config/max_steps:
+  desc: null
+  value: 200000
+config/max_text_len:
+  desc: null
+  value: 40
+config/mlm_prob:
+  desc: null
+  value: 0.15
+config/mlp_ratio:
+  desc: null
+  value: 4
+config/num_gpus:
+  desc: null
+  value: 0
+config/num_heads:
+  desc: null
+  value: 12
+config/num_layers:
+  desc: null
+  value: 12
+config/num_nodes:
+  desc: null
+  value: 1
+config/num_workers:
+  desc: null
+  value: 8
+config/optim_type:
+  desc: null
+  value: adamw
+config/patch_size:
+  desc: null
+  value: 32
+config/per_gpu_batchsize:
+  desc: null
+  value: 64
+config/precision:
+  desc: null
+  value: 16
+config/resume_from:
+  desc: null
+  value: None
+config/seed:
+  desc: null
+  value: 0
+config/test_only:
+  desc: null
+  value: false
+config/tokenizer:
+  desc: null
+  value: bert-base-uncased
+config/train_transform_keys:
+  desc: null
+  value:
+  - pixelbert
+config/val_check_interval:
+  desc: null
+  value: 1.0
+config/val_transform_keys:
+  desc: null
+  value:
+  - pixelbert
+config/vit:
+  desc: null
+  value: vit_base_patch32_384
+config/vocab_size:
+  desc: null
+  value: 30522
+config/vqav2_label_size:
+  desc: null
+  value: 3129
+config/warmup_steps:
+  desc: null
+  value: 2500
+config/weight_decay:
+  desc: null
+  value: 0.01
+config/whole_word_masking:
+  desc: null
+  value: true

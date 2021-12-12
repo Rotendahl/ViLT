@@ -1,0 +1,31 @@
+{
+    "os": "macOS-12.0.1-x86_64-i386-64bit",
+    "python": "3.9.7",
+    "heartbeatAt": "2021-12-12T15:54:00.442928",
+    "startedAt": "2021-12-12T15:53:58.389441",
+    "docker": null,
+    "cpu_count": 12,
+    "cuda": null,
+    "args": [
+        "with",
+        "data_root=/Users/rotendahl/Documents/KU/Courses/thesis/data/arrow_mapped",
+        "num_gpus=0",
+        "num_nodes=1",
+        "task_mlm_itm",
+        "whole_word_masking=True",
+        "step200k",
+        "per_gpu_batchsize=64"
+    ],
+    "state": "running",
+    "program": "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT/run.py",
+    "codePath": "run.py",
+    "git": {
+        "remote": "https://github.com/Rotendahl/ViLT.git",
+        "commit": "609083216d66adb1387a1fc1fba99acb69119c05"
+    },
+    "email": "Benjamin@Rotendahl.dk",
+    "root": "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT",
+    "host": "mac.local",
+    "username": "rotendahl",
+    "executable": "/Users/rotendahl/Documents/KU/Courses/thesis/code/ViLT/venv/bin/python"
+}

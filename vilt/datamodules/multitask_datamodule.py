@@ -4,7 +4,11 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
+import torch.distributed as dist
 
+dist.init_process_group(
+    "gloo", init_method="file:///tmp/somefile", rank=0, world_size=1
+)
 from . import _datamodules
 
 
@@ -39,12 +43,13 @@ class MTDataModule(LightningDataModule):
         self.tokenizer = self.dms[0].tokenizer
 
         self.collate = functools.partial(
-            self.dms[0].train_dataset.collate, mlm_collator=self.dms[0].mlm_collator,
+            self.dms[0].train_dataset.collate,
+            mlm_collator=self.dms[0].mlm_collator,
         )
 
         if self.dist:
             self.train_sampler = DistributedSampler(self.train_dataset, shuffle=True)
-            self.val_sampler = DistributedSampler(self.val_dataset, shuffle=True)
+            self.val_sampler = DistributedSampler(self.val_dataset, shuffle=False)
             self.test_sampler = DistributedSampler(self.test_dataset, shuffle=False)
         else:
             self.train_sampler = None
