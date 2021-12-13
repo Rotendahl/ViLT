@@ -32,6 +32,7 @@ class CheckpointEveryNSteps(pl.Callback):
         self.save_step_frequency = save_step_frequency
         self.prefix = prefix
         self.use_modelcheckpoint_filename = use_modelcheckpoint_filename
+        self.has_printed_ckpt_info = False
 
     def on_batch_end(self, trainer: pl.Trainer, _):
         """Check if we should save a checkpoint after every train batch"""
@@ -44,7 +45,9 @@ class CheckpointEveryNSteps(pl.Callback):
                 filename = f"{self.prefix}_{epoch=}_{global_step=}.ckpt"
             ckpt_path = os.path.join(trainer.checkpoint_callback.dirpath, filename)
             trainer.save_checkpoint(ckpt_path)
-            logging.info(f"Wrote checkpoint {ckpt_path}")
+            if not self.has_printed_ckpt_info:
+                self.has_printed_ckpt_info = True
+                logging.info(f"Wrote checkpoint {ckpt_path}")
 
 
 @ex.automain
@@ -85,7 +88,7 @@ def main(_config):
             _config["per_gpu_batchsize"] * num_gpus * _config["num_nodes"]
         )
     max_steps = _config["max_steps"] if _config["max_steps"] is not None else None
-    wandb_logger = WandbLogger(name=exp_name, project="vilt")
+    wandb_logger = WandbLogger(name=exp_name, project="vilt-gender-cnt-pretrain")
     trainer = pl.Trainer(
         gpus=_config["num_gpus"],
         num_nodes=_config["num_nodes"],
