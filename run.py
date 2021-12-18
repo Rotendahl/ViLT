@@ -88,7 +88,7 @@ def main(_config):
             _config["per_gpu_batchsize"] * num_gpus * _config["num_nodes"]
         )
     max_steps = _config["max_steps"] if _config["max_steps"] is not None else None
-    wandb_logger = WandbLogger(name=exp_name, project="vilt-gender-cnt-pretrain")
+    wandb_logger = WandbLogger()
     trainer = pl.Trainer(
         gpus=_config["num_gpus"],
         num_nodes=_config["num_nodes"],
@@ -105,7 +105,7 @@ def main(_config):
         accumulate_grad_batches=grad_steps,
         log_every_n_steps=10,
         flush_logs_every_n_steps=10,
-        resume_from_checkpoint="/home/xmt224/data/vilt_original.ckpt",
+        # resume_from_checkpoint="/home/xmt224/shared/bert_models_to_clean/seq256_72h/latest_checkpoint/mp_rank_00_model_states.pt",
         weights_summary="top",
         fast_dev_run=_config["fast_dev_run"],
         val_check_interval=_config["val_check_interval"],

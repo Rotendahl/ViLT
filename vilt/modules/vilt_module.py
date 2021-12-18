@@ -8,9 +8,107 @@ from vilt.modules import heads, objectives, vilt_utils
 
 
 class ViLTransformerSS(pl.LightningModule):
+    def set_weights_from_bert(self):
+        blocks = self.transformer.blocks
+        for block_nr in range(len(blocks)):
+            block = blocks[block_nr]
+            with torch.no_grad():
+                self.transformer.blocks[block_nr].attn.qkv.weight[
+                    0:768, :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.self.query.weight"
+                )
+                self.transformer.blocks[block_nr].attn.qkv.weight[
+                    768 : 768 * 2, :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.self.key.weight"
+                )
+                self.transformer.blocks[block_nr].attn.qkv.weight[
+                    768 * 2 :, :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.self.value.weight"
+                )
+                self.transformer.blocks[block_nr].attn.qkv.bias[
+                    0:768
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.self.query.bias"
+                )
+                self.transformer.blocks[block_nr].attn.qkv.weight[
+                    768 : 768 * 2
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.self.key.bias"
+                )
+                self.transformer.blocks[block_nr].attn.qkv.weight[
+                    768 * 2 :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.self.value.bias"
+                )
+                self.transformer.blocks[block_nr].attn.proj.weight[
+                    :, :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.output.dense.weight"
+                )
+                self.transformer.blocks[block_nr].attn.proj.bias[
+                    :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.attention.output.dense.bias"
+                )
+                self.transformer.blocks[block_nr].norm1.weight[
+                    :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.PreAttentionLayerNorm.weight"
+                )
+                self.transformer.blocks[block_nr].norm1.bias[:] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.PreAttentionLayerNorm.bias"
+                )
+                self.transformer.blocks[block_nr].norm2.weight[
+                    :
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.PostAttentionLayerNorm.weight"
+                )
+                self.transformer.blocks[block_nr].norm2.bias[:] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.PostAttentionLayerNorm.bias"
+                )
+                bert_inter = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.intermediate.dense_act.weight"
+                )
+                (a, b) = bert_inter.size()
+                self.transformer.blocks[block_nr].mlp.fc1.weight[:a, :] = bert_inter
+                self.transformer.blocks[block_nr].mlp.fc1.bias[
+                    :a
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.intermediate.dense_act.bias"
+                )
+
+                self.transformer.blocks[block_nr].mlp.fc2.weight[
+                    :, :a
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.output.dense.weight"
+                )
+                self.transformer.blocks[block_nr].mlp.fc2.bias[
+                    :a
+                ] = self.prenorm_bert.pop(
+                    f"bert.encoder.layer.{block_nr}.output.dense.bias"
+                )
+
+            bert_layers = {}
+            for k in [
+                layer
+                for layer in self.prenorm_bert.keys()
+                if str(block_nr) in layer.split(".")
+            ]:
+                bert_layers[k] = self.prenorm_bert[k]
+
     def __init__(self, config):
         super().__init__()
         self.save_hyperparameters()
+        self.init_from_bert = config["init_from_bert"]
+        self.prenorm_bert = None
+        if self.init_from_bert:
+            self.prenorm_bert = torch.load(
+                config["bert_path"],
+                map_location="cpu",
+            )
 
         bert_config = BertConfig(
             vocab_size=config["vocab_size"],
@@ -24,10 +122,25 @@ class ViLTransformerSS(pl.LightningModule):
         )
 
         self.text_embeddings = BertEmbeddings(bert_config)
-        self.text_embeddings.apply(objectives.init_weights)
+        if self.init_from_bert:
+            with torch.no_grad():
+                self.text_embeddings.word_embeddings.weight[:] = self.prenorm_bert[
+                    "bert.embeddings.word_embeddings.weight"
+                ][0:30522, :]
+                self.prenorm_bert.pop("bert.embeddings.word_embeddings.weight")
+        else:
+            self.text_embeddings.apply(objectives.init_weights)
 
         self.token_type_embeddings = nn.Embedding(2, config["hidden_size"])
-        self.token_type_embeddings.apply(objectives.init_weights)
+
+        if self.init_from_bert:
+            with torch.no_grad():
+                self.token_type_embeddings.weight[:] = self.prenorm_bert[
+                    "bert.embeddings.token_type_embeddings.weight"
+                ][:]
+                self.prenorm_bert.pop("bert.embeddings.token_type_embeddings.weight")
+        else:
+            self.token_type_embeddings.apply(objectives.init_weights)
 
         if self.hparams.config["load_path"] == "":
             self.transformer = getattr(vit, self.hparams.config["vit"])(
@@ -37,7 +150,9 @@ class ViLTransformerSS(pl.LightningModule):
             self.transformer = getattr(vit, self.hparams.config["vit"])(
                 pretrained=False, config=self.hparams.config
             )
-
+        if self.init_from_bert:
+            self.set_weights_from_bert()
+            print(f"Loaded bert weights from {config['bert_path']}")
         self.pooler = heads.Pooler(config["hidden_size"])
         self.pooler.apply(objectives.init_weights)
 

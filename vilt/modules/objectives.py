@@ -27,7 +27,7 @@ def cost_matrix_cosine(x, y, eps=1e-5):
 
 
 def trace(x):
-    """ compute trace of input tensor (batched) """
+    """compute trace of input tensor (batched)"""
     b, m, n = x.size()
     assert m == n
     mask = torch.eye(n, dtype=torch.bool, device=x.device).unsqueeze(0).expand_as(x)
@@ -37,7 +37,7 @@ def trace(x):
 
 @torch.no_grad()
 def ipot(C, x_len, x_pad, y_len, y_pad, joint_pad, beta, iteration, k):
-    """ [B, M, N], [B], [B, M], [B], [B, N], [B, M, N]"""
+    """[B, M, N], [B], [B, M], [B], [B, N], [B, M, N]"""
     b, m, n = C.size()
     sigma = torch.ones(b, m, dtype=C.dtype, device=C.device) / x_len.unsqueeze(1)
     T = torch.ones(b, n, m, dtype=C.dtype, device=C.device)
@@ -71,7 +71,7 @@ def ipot(C, x_len, x_pad, y_len, y_pad, joint_pad, beta, iteration, k):
 def optimal_transport_dist(
     txt_emb, img_emb, txt_pad, img_pad, beta=0.5, iteration=50, k=1
 ):
-    """ [B, M, D], [B, N, D], [B, M], [B, N]"""
+    """[B, M, D], [B, N, D], [B, M], [B, N]"""
     cost = cost_matrix_cosine(txt_emb, img_emb)
     # mask the padded inputs
     joint_pad = txt_pad.unsqueeze(-1) | img_pad.unsqueeze(-2)

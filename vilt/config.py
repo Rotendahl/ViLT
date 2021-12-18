@@ -26,7 +26,10 @@ def config():
 
     # Image setting
     train_transform_keys = ["pixelbert"]
-    starting_gender_ratio = 0.15
+    init_from_bert = False
+    bert_path = None
+    starting_gender_ratio = 0.5
+    should_gender_normalise = True
     val_transform_keys = ["pixelbert"]
     image_size = 384
     max_image_len = -1
@@ -153,6 +156,7 @@ def task_finetune_nlvr2_randaug():
 @ex.named_config
 def task_finetune_vqa():
     exp_name = "finetune_vqa"
+    should_gender_normalise = False
     datasets = ["vqa"]
     loss_names = _loss_names({"vqa": 1})
     batch_size = 256
@@ -170,6 +174,7 @@ def task_finetune_vqa_randaug():
     exp_name = "finetune_vqa_randaug"
     datasets = ["vqa"]
     train_transform_keys = ["pixelbert_randaug"]
+    should_gender_normalise = False
     loss_names = _loss_names({"vqa": 1})
     batch_size = 256
     max_epoch = 10

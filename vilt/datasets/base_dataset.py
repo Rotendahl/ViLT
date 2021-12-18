@@ -42,12 +42,17 @@ class BaseDataset(torch.utils.data.Dataset):
         self.config = config
 
         self.gender_normalized_ratio = config["starting_gender_ratio"]
+        self.should_gender_normlize = config["should_gender_normalise"]
         remaing = 1 - self.gender_normalized_ratio
-        self.total_steps = (
-            config["max_steps"]
-            if config["max_steps"] < 200_000
-            else config["max_steps"] - 200_000
-        )  # pretrained steps does not count
+        if self.should_gender_normlize:
+            self.total_steps = (
+                config["max_steps"]
+                if config["max_steps"] < 200_000
+                else config["max_steps"] - 200_000
+            )  # pretrained steps does not count
+        else:
+            self.total_steps = 1
+
         self.delta_gender = remaing / self.total_steps
         self.current_count = 0
         if len(names) != 0:
@@ -67,7 +72,8 @@ class BaseDataset(torch.utils.data.Dataset):
             if text_column_name != "":
                 self.text_column_name = text_column_name
                 self.all_texts = self.table[text_column_name].to_pandas().tolist()
-                self.all_mapped_texts = self.table["mapped"].to_pandas().tolist()
+                if self.should_gender_normlize:
+                    self.all_mapped_texts = self.table["mapped"].to_pandas().tolist()
             else:
                 self.all_texts = list()
         else:
@@ -87,14 +93,20 @@ class BaseDataset(torch.utils.data.Dataset):
 
     @property
     def corpus(self):
-        return [text for texts in self.all_mapped_texts for text in texts]
+        if self.should_gender_normlize:
+            return [text for texts in self.all_mapped_texts for text in texts]
+        else:
+            return [text for texts in self.all_texts for text in texts]
 
     def __len__(self):
         return len(self.index_mapper)
 
     def _raise_gender_delta(self):
         self.current_count += 1
-        if self.current_count >= self.config["batch_size"]:
+        if (
+            self.should_gender_normlize
+            and self.current_count >= self.config["batch_size"]
+        ):
             self.gender_normalized_ratio += self.delta_gender
             logging.info(f"Raised gender ratio to {self.gender_normalized_ratio}")
             self.current_count = 0
@@ -126,7 +138,10 @@ class BaseDataset(torch.utils.data.Dataset):
         self._raise_gender_delta()
         index, caption_index = self.index_mapper[raw_index]
         text = self.all_texts[index][caption_index]
-        if random.random() <= self.gender_normalized_ratio:
+        if (
+            self.should_gender_normlize
+            and random.random() <= self.gender_normalized_ratio
+        ):
             text = self.all_mapped_texts[index][caption_index]
 
         encoding = self.tokenizer(
@@ -149,7 +164,10 @@ class BaseDataset(torch.utils.data.Dataset):
 
         index, caption_index = self.index_mapper[random_index]
         text = self.all_texts[index][caption_index]
-        if random.random() <= self.gender_normalized_ratio:
+        if (
+            self.should_gender_normalize
+            and random.random() <= self.gender_normalized_ratio
+        ):
             text = self.all_mapped_texts[index][caption_index]
         encoding = self.tokenizer(
             text,

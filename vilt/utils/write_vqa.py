@@ -84,7 +84,8 @@ def make_arrow(root, dataset_root):
     all_major_answers = list()
 
     for split, annots in zip(
-        ["train", "val"], [annotations_train2014, annotations_val2014],
+        ["train", "val"],
+        [annotations_train2014, annotations_val2014],
     ):
         _annot = annotations[split]
         for q in tqdm(annots):
@@ -96,7 +97,8 @@ def make_arrow(root, dataset_root):
     label2ans = list(counter.keys())
 
     for split, annots in zip(
-        ["train", "val"], [annotations_train2014, annotations_val2014],
+        ["train", "val"],
+        [annotations_train2014, annotations_val2014],
     ):
         _annot = annotations[split]
         for q in tqdm(annots):
@@ -116,7 +118,10 @@ def make_arrow(root, dataset_root):
                 scores.append(score)
 
             _annot[q["image_id"]][q["question_id"]].append(
-                {"labels": labels, "scores": scores,}
+                {
+                    "labels": labels,
+                    "scores": scores,
+                }
             )
 
     for split in ["train", "val"]:
@@ -156,11 +161,14 @@ def make_arrow(root, dataset_root):
         else:
             print("not all images have caption annotations")
         print(
-            len(paths), len(annot_paths), len(annot),
+            len(paths),
+            len(annot_paths),
+            len(annot),
         )
 
         bs = [
-            path2rest(path, split, annotations, label2ans) for path in tqdm(annot_paths)
+            path2rest(path, split, annotations, label2ans)
+            for path in tqdm(annot_paths, desc="Handling VQa")
         ]
 
         dataframe = pd.DataFrame(
