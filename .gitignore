@@ -5,7 +5,10 @@ __pycache__/
 .vscode/
 notebooks/
 wandb
+vilt-real
 dataset/
+ViLT
+Vilt\ evaluate
 dropbox_uploader.sh
 .dfc/
 *.egg-info
@@ -15,3 +18,7 @@ weights/
 scripts/
 demos/
 assets/test*
+Vilt evaulate/
+some_result/
+vilt-gender-cnt-pretrain-50gender/
+vilt-gender-cnt-pretrain/
