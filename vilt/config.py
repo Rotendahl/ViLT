@@ -21,6 +21,7 @@ def config():
     exp_name = "vilt"
     seed = 0
     datasets = ["coco", "vg", "sbu", "gcc"]
+    datasets = ["coco"]
     loss_names = _loss_names({"itm": 1, "mlm": 1})
     batch_size = 4096  # this is a desired batch size; pl trainer will accumulate gradients when per step batch is smaller.
 
@@ -99,6 +100,7 @@ def env_dandelin():
 def task_mlm_itm():
     exp_name = "mlm_itm"
     datasets = ["coco", "vg", "gcc", "cc12"]  # , "sbu", "gcc"]
+    datasets = ["coco"]  # , "sbu", "gcc"]
     loss_names = _loss_names({"itm": 1, "mlm": 1})
     batch_size = 4096
     max_epoch = 10
